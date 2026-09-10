@@ -24,17 +24,17 @@ jobs:
           mkdir -p app/src/main
           cp AndroidManifest.xml app/src/main/ || true
           
-          # 1. كتابة ملف settings.gradle بالطريقة اللي بيحبها السيرفر
-          echo "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }" > settings.gradle
-          echo "dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }" >> settings.gradle
-          echo "rootProject.name = 'RemoteStreamer'" >> settings.gradle
+          # 1. ملف settings.gradle لتعريف المجلد الأساسي للتطبيق
+          echo "rootProject.name = 'RemoteStreamer'" > settings.gradle
           echo "include ':app'" >> settings.gradle
           
-          # 2. ملف build.gradle الرئيسي فارغ تماماً لتجنب أي تضارب
-          echo "" > build.gradle
+          # 2. ملف build.gradle الرئيسي لتعريف الإضافات وأرقام الإصدارات بشكل كامل ورسمي
+          echo "buildscript { ext.kotlin_version = '1.9.0'; repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.2.0'; classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\" } }" > build.gradle
+          echo "allprojects { repositories { google(); mavenCentral() } }" >> build.gradle
           
-          # 3. كتابة ملف build.gradle الخاص بـ app مع إضافة المكونات الأساسية
-          echo "plugins { id 'com.android.application'; id 'org.jetbrains.kotlin.android' version '1.9.0' }" > app/build.gradle
+          # 3. ملف app/build.gradle الخاص بتجميع كود التطبيق والمكتبات
+          echo "apply plugin: 'com.android.application'" > app/build.gradle
+          echo "apply plugin: 'kotlin-android'" >> app/build.gradle
           echo "android { compileSdk 34; defaultConfig { applicationId 'com.remote.streamer'; minSdk 24; targetSdk 34; versionCode 1; versionName '1.0' }; buildTypes { release { minifyEnabled false } }; sourceSets { main { java.srcDirs = ['src/main/java']; manifest.srcFile 'src/main/AndroidManifest.xml' } } }" >> app/build.gradle
           echo "dependencies { implementation 'androidx.core:core-ktx:1.12.0'; implementation 'androidx.appcompat:appcompat:1.6.1'; implementation 'com.google.android.material:material:1.11.0'; implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3' }" >> app/build.gradle
 

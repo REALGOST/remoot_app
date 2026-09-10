@@ -26,17 +26,33 @@ jobs:
           mkdir -p android_project/app/src/main
           cp AndroidManifest.xml android_project/app/src/main/ || true
           
-          # إعداد الـ settings بالطريقة التقليدية الأكثر استقراراً لمنع أي تعارض
-          echo "rootProject.name = 'RemoteStreamer'" > android_project/settings.gradle
-          echo "include ':app'" >> android_project/settings.gradle
+          # كتابة ملف settings.gradle
+          cat << 'EOF' > android_project/settings.gradle
+          rootProject.name = 'RemoteStreamer'
+          include ':app'
+          EOF
           
-          # استخدام إصدار أندرويد 8.1.0 وإصدار كوتلن 1.8.20 (التوليفة الأكثر استقراراً مع جافا 17)
-          echo "buildscript { ext.kotlin_version = '1.8.20'; repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.1.0'; classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\" } }" > android_project/build.gradle
-          echo "allprojects { repositories { google(); mavenCentral() } }" >> android_project/build.gradle
+          # كتابة ملف build.gradle الرئيسي
+          cat << 'EOF' > android_project/build.gradle
+          buildscript {
+              ext.kotlin_version = '1.9.0'
+              repositories { google(); mavenCentral() }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.0'
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+              }
+          }
+          allprojects {
+              repositories { google(); mavenCentral() }
+          }
+          EOF
           
-          echo "apply plugin: 'com.android.application'" > android_project/app/build.gradle
-          echo "apply plugin: 'kotlin-android'" >> android_project/app/build.gradle
-          echo "android {
+          # كتابة ملف app/build.gradle بطريقة مجمعة ونظيفة تمنع الأخطاء تماماً
+          cat << 'EOF' > android_project/app/build.gradle
+          apply plugin: 'com.android.application'
+          apply plugin: 'kotlin-android'
+          
+          android {
               compileSdk 34
               namespace 'com.remote.streamer'
               defaultConfig {
@@ -52,8 +68,15 @@ jobs:
                       manifest.srcFile 'src/main/AndroidManifest.xml'
                   }
               }
-          }" >> android_project/app/build.gradle
-          echo "dependencies { implementation 'androidx.core:core-ktx:1.10.1'; implementation 'androidx.appcompat:appcompat:1.6.1'; implementation 'com.google.android.material:material:1.9.0'; implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4' }" >> android_project/app/build.gradle
+          }
+          
+          dependencies {
+              implementation 'androidx.core:core-ktx:1.12.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.material:material:1.11.0'
+              implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+          }
+          EOF
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -61,7 +84,7 @@ jobs:
       - name: Build with Gradle
         run: |
           cd android_project
-          gradle wrapper --gradle-version 8.1.1
+          gradle wrapper --gradle-version 8.2
           chmod +x gradlew
           ./gradlew assembleDebug
 
@@ -70,4 +93,3 @@ jobs:
         with:
           name: my-app-apk
           path: android_project/app/build/outputs/apk/debug/*.apk
-

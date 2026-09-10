@@ -1,0 +1,74 @@
+name: Build Android APK
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Create Clean Android Architecture
+        run: |
+          # 1. تنظيف شامل لأي رواسب قديمة في السيرفر
+          rm -f build.gradle settings.gradle || true
+          rm -rf app || true
+          
+          # 2. إنشاء الهيكل الفرعي الرسمي المعزول للتطبيق
+          mkdir -p app/src/main/java/com/remote/streamer
+          cp MainActivity.kt app/src/main/java/com/remote/streamer/ || true
+          cp StreamingService.kt app/src/main/java/com/remote/streamer/ || true
+          cp NetworkManager.kt app/src/main/java/com/remote/streamer/ || true
+          
+          mkdir -p app/src/main
+          cp AndroidManifest.xml app/src/main/ || true
+          
+          # 3. ملف settings.gradle الرئيسي
+          echo "rootProject.name = 'RemoteStreamer'" > settings.gradle
+          echo "include ':app'" >> settings.gradle
+          
+          # 4. ملف build.gradle الرئيسي الخارجي الفارغ
+          echo "buildscript { repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.2.0'; classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0' } }" > build.gradle
+          echo "allprojects { repositories { google(); mavenCentral() } }" >> build.gradle
+          
+          # 5. ملف build.gradle الداخلي المعزول الذي يحتوي على الأوامر الصريحة لحل المشكلة
+          echo "apply plugin: 'com.android.application'" > app/build.gradle
+          echo "apply plugin: 'kotlin-android'" >> app/build.gradle
+          echo "android {
+              compileSdkVersion 34
+              buildToolsVersion '34.0.0'
+              defaultConfig {
+                  applicationId 'com.remote.streamer'
+                  minSdkVersion 24
+                  targetSdkVersion 34
+                  versionCode 1
+                  versionName '1.0'
+              }
+              sourceSets {
+                  main {
+                      java.srcDirs = ['src/main/java']
+                      manifest.srcFile 'src/main/AndroidManifest.xml'
+                  }
+              }
+          }" >> app/build.gradle
+          echo "dependencies { implementation 'androidx.core:core-ktx:1.12.0'; implementation 'androidx.appcompat:appcompat:1.6.1'; implementation 'com.google.android.material:material:1.11.0'; implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3' }" >> app/build.gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build with Gradle
+        run: |
+          gradle wrapper
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-app-apk
+          path: app/build/outputs/apk/debug/*.apk

@@ -13,38 +13,46 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Initialize Android Project
+      - name: Setup Android Project Files
         run: |
+          # إنشاء الهيكل الكامل للأندرويد غصب عن السيرفر
           mkdir -p app/src/main/java/com/remote/streamer
-          mv MainActivity.kt app/src/main/java/com/remote/streamer/ || true
-          mv StreamingService.kt app/src/main/java/com/remote/streamer/ || true
-          mv NetworkManager.kt app/src/main/java/com/remote/streamer/ || true
-          mv Protocol.kt app/src/main/java/com/remote/streamer/ || true
-          mv RemoteAccessibilityService.kt app/src/main/java/com/remote/streamer/ || true
-          mkdir -p app/src/main/AndroidManifest.xml_dir
-          mv AndroidManifest.xml app/src/main/ || true
+          cp MainActivity.kt app/src/main/java/com/remote/streamer/ || true
+          cp StreamingService.kt app/src/main/java/com/remote/streamer/ || true
+          cp NetworkManager.kt app/src/main/java/com/remote/streamer/ || true
+          cp Protocol.kt app/src/main/java/com/remote/streamer/ || true
+          cp RemoteAccessibilityService.kt app/src/main/java/com/remote/streamer/ || true
           
-          # إنشاء ملفات الإعدادات تلقائياً لبناء الأندرويد
+          mkdir -p app/src/main
+          cp AndroidManifest.xml app/src/main/ || true
+          
+          # كتابة ملف settings.gradle التأسيسي
           echo "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }" > settings.gradle
           echo "dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }" >> settings.gradle
           echo "rootProject.name = 'RemoteStreamer'" >> settings.gradle
           echo "include ':app'" >> settings.gradle
           
-          echo "plugins { id 'com.android.application' version '8.2.0' id 'org.jetbrains.kotlin.android' version '1.9.0' }" > build.gradle
+          # كتابة ملف build.gradle الرئيسي للمشروع
+          echo "buildscript { ext.kotlin_version = '1.9.0'; repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.2.0'; classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\" } }" > build.gradle
+          echo "allprojects { repositories { google(); mavenCentral() } }" >> build.gradle
           
-          echo "plugins { id 'com.android.application'; id 'org.jetbrains.kotlin.android' }
-          android {
-              compileSdk 34
-              defaultConfig { applicationId 'com.remote.streamer'; minSdk 24; targetSdk 34; versionCode 1; versionName '1.0' }
-          }" > app/build.gradle
+          # كتابة ملف build.gradle الخاص بـ الموديول app
+          echo "apply plugin: 'com.android.application'" > app/build.gradle
+          echo "apply plugin: 'kotlin-android'" >> app/build.gradle
+          echo "android { compileSdk 34; defaultConfig { applicationId 'com.remote.streamer'; minSdk 24; targetSdk 34; versionCode 1; versionName '1.0' }; buildTypes { release { minifyEnabled false } }; sourceSets { main { java.srcDirs = ['src/main/java']; manifest.srcFile 'src/main/AndroidManifest.xml' } } }" >> app/build.gradle
+          echo "dependencies { implementation 'androidx.core:core-ktx:1.12.0'; implementation 'androidx.appcompat:appcompat:1.6.1'; implementation 'com.google.android.material:material:1.11.0'; implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3' }" >> app/build.gradle
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build with Gradle
-        run: gradle assembleDebug
+        run: |
+          # توليد ملف الـ gradlew وبناء الـ APK فوراً
+          gradle wrapper
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: my-app-apk

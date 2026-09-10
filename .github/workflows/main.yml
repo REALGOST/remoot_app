@@ -15,29 +15,26 @@ jobs:
 
       - name: Setup Android Project Files
         run: |
-          # إنشاء مجلدات الكود
+          # إنشاء المجلدات للكود
           mkdir -p app/src/main/java/com/remote/streamer
           cp MainActivity.kt app/src/main/java/com/remote/streamer/ || true
           cp StreamingService.kt app/src/main/java/com/remote/streamer/ || true
           cp NetworkManager.kt app/src/main/java/com/remote/streamer/ || true
-          cp Protocol.kt app/src/main/java/com/remote/streamer/ || true
-          cp RemoteAccessibilityService.kt app/src/main/java/com/remote/streamer/ || true
           
           mkdir -p app/src/main
           cp AndroidManifest.xml app/src/main/ || true
           
-          # 1. كتابة ملف settings.gradle بدون تضارب
+          # 1. كتابة ملف settings.gradle بالطريقة اللي بيحبها السيرفر
           echo "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }" > settings.gradle
-          echo "dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.PRESERVE_SETTINGS); repositories { google(); mavenCentral() } }" >> settings.gradle
+          echo "dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }" >> settings.gradle
           echo "rootProject.name = 'RemoteStreamer'" >> settings.gradle
           echo "include ':app'" >> settings.gradle
           
-          # 2. كتابة ملف build.gradle الرئيسي (تم حذف الـ repositories منه لمنع الخطأ)
-          echo "buildscript { ext.kotlin_version = '1.9.0'; dependencies { classpath 'com.android.tools.build:gradle:8.2.0'; classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\" } }" > build.gradle
+          # 2. ملف build.gradle الرئيسي فارغ تماماً لتجنب أي تضارب
+          echo "" > build.gradle
           
-          # 3. كتابة ملف build.gradle الخاص بـ app
-          echo "apply plugin: 'com.android.application'" > app/build.gradle
-          echo "apply plugin: 'kotlin-android'" >> app/build.gradle
+          # 3. كتابة ملف build.gradle الخاص بـ app مع إضافة المكونات الأساسية
+          echo "plugins { id 'com.android.application'; id 'org.jetbrains.kotlin.android' version '1.9.0' }" > app/build.gradle
           echo "android { compileSdk 34; defaultConfig { applicationId 'com.remote.streamer'; minSdk 24; targetSdk 34; versionCode 1; versionName '1.0' }; buildTypes { release { minifyEnabled false } }; sourceSets { main { java.srcDirs = ['src/main/java']; manifest.srcFile 'src/main/AndroidManifest.xml' } } }" >> app/build.gradle
           echo "dependencies { implementation 'androidx.core:core-ktx:1.12.0'; implementation 'androidx.appcompat:appcompat:1.6.1'; implementation 'com.google.android.material:material:1.11.0'; implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3' }" >> app/build.gradle
 

@@ -24,10 +24,10 @@ jobs:
           mkdir -p src/main
           cp AndroidManifest.xml src/main/ || true
           
-          # 1. ملف settings.gradle التأسيسي البسيط
+          # 1. ملف settings.gradle التأسيسي البسيط جداً
           echo "rootProject.name = 'RemoteStreamer'" > settings.gradle
           
-          # 2. ملف build.gradle الموحد والكامل الذي يحتوي على كل شيء في مكان واحد ليراه السيرفر فوراً
+          # 2. ملف build.gradle الموحد والكامل بالطريقة الكلاسيكية المضمونة مجدداً
           echo "buildscript {
               ext.kotlin_version = '1.9.0'
               repositories { google(); mavenCentral() }
@@ -45,13 +45,13 @@ jobs:
           apply plugin: 'kotlin-android'
           
           android {
-              compileSdk 34
-              namespace 'com.remote.streamer'
+              compileSdkVersion 34
+              buildToolsVersion \"34.0.0\"
               
               defaultConfig {
                   applicationId 'com.remote.streamer'
-                  minSdk 24
-                  targetSdk 34
+                  minSdkVersion 24
+                  targetSdkVersion 34
                   versionCode 1
                   versionName '1.0'
               }
@@ -85,3 +85,4 @@ jobs:
         with:
           name: my-app-apk
           path: build/outputs/apk/debug/*.apk
+

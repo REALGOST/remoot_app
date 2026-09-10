@@ -15,11 +15,9 @@ jobs:
 
       - name: Create Isolated Android Project
         run: |
-          # 1. تنظيف السيرفر تماماً
           rm -f build.gradle settings.gradle || true
           rm -rf app || true
           
-          # 2. إنشاء الهيكل في مجلد فرعي معزول اسمه 'android_project' لمنع الكاش القديم
           mkdir -p android_project/app/src/main/java/com/remote/streamer
           cp MainActivity.kt android_project/app/src/main/java/com/remote/streamer/ || true
           cp StreamingService.kt android_project/app/src/main/java/com/remote/streamer/ || true
@@ -28,16 +26,14 @@ jobs:
           mkdir -p android_project/app/src/main
           cp AndroidManifest.xml android_project/app/src/main/ || true
           
-          # 3. كتابة ملف settings.gradle بنظام البلاجينز الحديث الموحد بالكامل
+          # إعداد المستودعات والإصدارات المتوافقة مع أحدث نظام في السيرفر
           echo "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }" > android_project/settings.gradle
           echo "dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }" >> android_project/settings.gradle
           echo "rootProject.name = 'RemoteStreamer'" >> android_project/settings.gradle
           echo "include ':app'" >> android_project/settings.gradle
           
-          # 4. ملف build.gradle الرئيسي الموحد
-          echo "plugins { id 'com.android.application' version '8.2.0' apply false; id 'org.jetbrains.kotlin.android' version '1.9.0' apply false }" > android_project/build.gradle
+          echo "plugins { id 'com.android.application' version '8.4.0' apply false; id 'org.jetbrains.kotlin.android' version '1.9.20' apply false }" > android_project/build.gradle
           
-          # 5. ملف app/build.gradle الداخلي المستقر والصحيح
           echo "plugins { id 'com.android.application'; id 'org.jetbrains.kotlin.android' }" > android_project/app/build.gradle
           echo "android {
               compileSdk 34
@@ -64,7 +60,7 @@ jobs:
       - name: Build with Gradle
         run: |
           cd android_project
-          gradle wrapper
+          gradle wrapper --gradle-version 8.6
           chmod +x gradlew
           ./gradlew assembleDebug
 

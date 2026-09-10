@@ -1,0 +1,51 @@
+name: Build Android APK
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Initialize Android Project
+        run: |
+          mkdir -p app/src/main/java/com/remote/streamer
+          mv MainActivity.kt app/src/main/java/com/remote/streamer/ || true
+          mv StreamingService.kt app/src/main/java/com/remote/streamer/ || true
+          mv NetworkManager.kt app/src/main/java/com/remote/streamer/ || true
+          mv Protocol.kt app/src/main/java/com/remote/streamer/ || true
+          mv RemoteAccessibilityService.kt app/src/main/java/com/remote/streamer/ || true
+          mkdir -p app/src/main/AndroidManifest.xml_dir
+          mv AndroidManifest.xml app/src/main/ || true
+          
+          # إنشاء ملفات الإعدادات تلقائياً لبناء الأندرويد
+          echo "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }" > settings.gradle
+          echo "dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }" >> settings.gradle
+          echo "rootProject.name = 'RemoteStreamer'" >> settings.gradle
+          echo "include ':app'" >> settings.gradle
+          
+          echo "plugins { id 'com.android.application' version '8.2.0' id 'org.jetbrains.kotlin.android' version '1.9.0' }" > build.gradle
+          
+          echo "plugins { id 'com.android.application'; id 'org.jetbrains.kotlin.android' }
+          android {
+              compileSdk 34
+              defaultConfig { applicationId 'com.remote.streamer'; minSdk 24; targetSdk 34; versionCode 1; versionName '1.0' }
+          }" > app/build.gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build with Gradle
+        run: gradle assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-app-apk
+          path: app/build/outputs/apk/debug/*.apk

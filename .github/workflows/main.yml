@@ -15,7 +15,7 @@ jobs:
 
       - name: Setup Android Project Files
         run: |
-          # إنشاء الهيكل الكامل للأندرويد غصب عن السيرفر
+          # إنشاء مجلدات الكود
           mkdir -p app/src/main/java/com/remote/streamer
           cp MainActivity.kt app/src/main/java/com/remote/streamer/ || true
           cp StreamingService.kt app/src/main/java/com/remote/streamer/ || true
@@ -26,17 +26,16 @@ jobs:
           mkdir -p app/src/main
           cp AndroidManifest.xml app/src/main/ || true
           
-          # كتابة ملف settings.gradle التأسيسي
+          # 1. كتابة ملف settings.gradle بدون تضارب
           echo "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }" > settings.gradle
-          echo "dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }" >> settings.gradle
+          echo "dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.PRESERVE_SETTINGS); repositories { google(); mavenCentral() } }" >> settings.gradle
           echo "rootProject.name = 'RemoteStreamer'" >> settings.gradle
           echo "include ':app'" >> settings.gradle
           
-          # كتابة ملف build.gradle الرئيسي للمشروع
-          echo "buildscript { ext.kotlin_version = '1.9.0'; repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.2.0'; classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\" } }" > build.gradle
-          echo "allprojects { repositories { google(); mavenCentral() } }" >> build.gradle
+          # 2. كتابة ملف build.gradle الرئيسي (تم حذف الـ repositories منه لمنع الخطأ)
+          echo "buildscript { ext.kotlin_version = '1.9.0'; dependencies { classpath 'com.android.tools.build:gradle:8.2.0'; classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\" } }" > build.gradle
           
-          # كتابة ملف build.gradle الخاص بـ الموديول app
+          # 3. كتابة ملف build.gradle الخاص بـ app
           echo "apply plugin: 'com.android.application'" > app/build.gradle
           echo "apply plugin: 'kotlin-android'" >> app/build.gradle
           echo "android { compileSdk 34; defaultConfig { applicationId 'com.remote.streamer'; minSdk 24; targetSdk 34; versionCode 1; versionName '1.0' }; buildTypes { release { minifyEnabled false } }; sourceSets { main { java.srcDirs = ['src/main/java']; manifest.srcFile 'src/main/AndroidManifest.xml' } } }" >> app/build.gradle
@@ -47,7 +46,6 @@ jobs:
 
       - name: Build with Gradle
         run: |
-          # توليد ملف الـ gradlew وبناء الـ APK فوراً
           gradle wrapper
           chmod +x gradlew
           ./gradlew assembleDebug

@@ -15,28 +15,61 @@ jobs:
 
       - name: Setup Android Project Files
         run: |
-          # إنشاء المجلدات للكود
-          mkdir -p app/src/main/java/com/remote/streamer
-          cp MainActivity.kt app/src/main/java/com/remote/streamer/ || true
-          cp StreamingService.kt app/src/main/java/com/remote/streamer/ || true
-          cp NetworkManager.kt app/src/main/java/com/remote/streamer/ || true
+          # إنشاء المجلدات للكود في الجذر الرئيسي مباشرة
+          mkdir -p src/main/java/com/remote/streamer
+          cp MainActivity.kt src/main/java/com/remote/streamer/ || true
+          cp StreamingService.kt src/main/java/com/remote/streamer/ || true
+          cp NetworkManager.kt src/main/java/com/remote/streamer/ || true
           
-          mkdir -p app/src/main
-          cp AndroidManifest.xml app/src/main/ || true
+          mkdir -p src/main
+          cp AndroidManifest.xml src/main/ || true
           
-          # 1. ملف settings.gradle لتعريف المجلد الأساسي للتطبيق
+          # 1. ملف settings.gradle التأسيسي البسيط
           echo "rootProject.name = 'RemoteStreamer'" > settings.gradle
-          echo "include ':app'" >> settings.gradle
           
-          # 2. ملف build.gradle الرئيسي لتعريف الإضافات وأرقام الإصدارات بشكل كامل ورسمي
-          echo "buildscript { ext.kotlin_version = '1.9.0'; repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.2.0'; classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\" } }" > build.gradle
-          echo "allprojects { repositories { google(); mavenCentral() } }" >> build.gradle
+          # 2. ملف build.gradle الموحد والكامل الذي يحتوي على كل شيء في مكان واحد ليراه السيرفر فوراً
+          echo "buildscript {
+              ext.kotlin_version = '1.9.0'
+              repositories { google(); mavenCentral() }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.0'
+                  classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\"
+              }
+          }
           
-          # 3. ملف app/build.gradle الخاص بتجميع كود التطبيق والمكتبات
-          echo "apply plugin: 'com.android.application'" > app/build.gradle
-          echo "apply plugin: 'kotlin-android'" >> app/build.gradle
-          echo "android { compileSdk 34; defaultConfig { applicationId 'com.remote.streamer'; minSdk 24; targetSdk 34; versionCode 1; versionName '1.0' }; buildTypes { release { minifyEnabled false } }; sourceSets { main { java.srcDirs = ['src/main/java']; manifest.srcFile 'src/main/AndroidManifest.xml' } } }" >> app/build.gradle
-          echo "dependencies { implementation 'androidx.core:core-ktx:1.12.0'; implementation 'androidx.appcompat:appcompat:1.6.1'; implementation 'com.google.android.material:material:1.11.0'; implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3' }" >> app/build.gradle
+          allprojects {
+              repositories { google(); mavenCentral() }
+          }
+          
+          apply plugin: 'com.android.application'
+          apply plugin: 'kotlin-android'
+          
+          android {
+              compileSdk 34
+              namespace 'com.remote.streamer'
+              
+              defaultConfig {
+                  applicationId 'com.remote.streamer'
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName '1.0'
+              }
+              
+              sourceSets {
+                  main {
+                      java.srcDirs = ['src/main/java']
+                      manifest.srcFile 'src/main/AndroidManifest.xml'
+                  }
+              }
+          }
+          
+          dependencies {
+              implementation 'androidx.core:core-ktx:1.12.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.material:material:1.11.0'
+              implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+          }" > build.gradle
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -51,4 +84,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: my-app-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: build/outputs/apk/debug/*.apk

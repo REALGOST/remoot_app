@@ -13,30 +13,34 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Create Isolated Android Project
+      - name: Create Clean Android Project
         run: |
-          # 1. إنشاء هيكل المجلدات النظيف والمعزول داخل مجلد مستقل تماماً
-          mkdir -p build_dir/app/src/main/java/com/remote/streamer
-          mkdir -p build_dir/app/src/main/res/xml
-          mkdir -p build_dir/app/src/main/res/values
+          # 1. تنظيف أي مجلدات أو ملفات قديمة تماماً لمنع أي لخبطة
+          rm -f build.gradle settings.gradle || true
+          rm -rf app build_dir || true
           
-          # 2. نسخ الملفات التي رفعتها أنت يدوياً إلى المجلد المعزول الجديد
-          cp NetworkManager.kt build_dir/app/src/main/java/com/remote/streamer/ || true
-          cp StreamingService.kt build_dir/app/src/main/java/com/remote/streamer/ || true
-          cp MainActivity.kt build_dir/app/src/main/java/com/remote/streamer/ || true
-          cp AndroidManifest.xml build_dir/app/src/main/ || true
+          # 2. إنشاء الهيكل الرسمي للأندرويد في الفولدر الرئيسي مباشرة
+          mkdir -p app/src/main/java/com/remote/streamer
+          mkdir -p app/src/main/res/xml
+          mkdir -p app/src/main/res/values
           
-          # 3. كتابة ملف إعدادات المجلدات الأساسي
-          echo "rootProject.name = 'RemoteStreamer'" > build_dir/settings.gradle
-          echo "include ':app'" >> build_dir/settings.gradle
+          # 3. نسخ أكواد الكوتلن والمانيفست المرفوعة لمكانها الصح
+          cp NetworkManager.kt app/src/main/java/com/remote/streamer/ || true
+          cp StreamingService.kt app/src/main/java/com/remote/streamer/ || true
+          cp MainActivity.kt app/src/main/java/com/remote/streamer/ || true
+          cp AndroidManifest.xml app/src/main/ || true
           
-          # 4. كتابة ملف build.gradle الرئيسي الخارجي
-          echo "buildscript { ext.kotlin_version = '1.9.0'; repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.2.0'; classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\" } }" > build_dir/build.gradle
-          echo "allprojects { repositories { google(); mavenCentral() } }" >> build_dir/build.gradle
+          # 4. كتابة ملف settings.gradle في الجذر الرئيسي
+          echo "rootProject.name = 'RemoteStreamer'" > settings.gradle
+          echo "include ':app'" >> settings.gradle
           
-          # 5. كتابة ملف app/build.gradle الداخلي (تم تصحيح المسار هنا لحذف التكرار)
-          echo "apply plugin: 'com.android.application'" > build_dir/app/build.gradle
-          echo "apply plugin: 'kotlin-android'" >> build_dir/app/build.gradle
+          # 5. كتابة ملف build.gradle الرئيسي الخارجي
+          echo "buildscript { ext.kotlin_version = '1.9.0'; repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.2.0'; classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\" } }" > build.gradle
+          echo "allprojects { repositories { google(); mavenCentral() } }" >> build.gradle
+          
+          # 6. كتابة ملف app/build.gradle الداخلي المظبوط بدون مجلدات إضافية
+          echo "apply plugin: 'com.android.application'" > app/build.gradle
+          echo "apply plugin: 'kotlin-android'" >> app/build.gradle
           echo "android {
               compileSdk 34
               namespace 'com.remote.streamer'
@@ -53,19 +57,18 @@ jobs:
                       manifest.srcFile 'src/main/AndroidManifest.xml'
                   }
               }
-          }" >> build_dir/app/build.gradle
-          echo "dependencies { implementation 'androidx.core:core-ktx:1.12.0'; implementation 'androidx.appcompat:appcompat:1.6.1'; implementation 'com.google.android.material:material:1.11.0'; implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3' }" >> build_dir/app/build.gradle
+          }" >> app/build.gradle
+          echo "dependencies { implementation 'androidx.core:core-ktx:1.12.0'; implementation 'androidx.appcompat:appcompat:1.6.1'; implementation 'com.google.android.material:material:1.11.0'; implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3' }" >> app/build.gradle
           
-          # 6. ملفات الإعدادات الإضافية للواجهات والـ XML
-          echo '<?xml version="1.0" encoding="utf-8"?><accessibility-service xmlns:android="http://google.com" android:accessibilityEventTypes="typeAllMask" android:accessibilityFeedbackType="feedbackGeneric" android:accessibilityFlags="flagDefault" android:canPerformGestures="true" android:description="@string/app_name" />' > build_dir/app/src/main/res/xml/accessibility_service_config.xml
-          echo '<resources><string name="app_name">Remote Streamer</string></resources>' > build_dir/app/src/main/res/values/strings.xml
+          # 7. ملفات إعدادات الواجهة والـ XML للخدمة
+          echo '<?xml version="1.0" encoding="utf-8"?><accessibility-service xmlns:android="http://google.com" android:accessibilityEventTypes="typeAllMask" android:accessibilityFeedbackType="feedbackGeneric" android:accessibilityFlags="flagDefault" android:canPerformGestures="true" android:description="@string/app_name" />' > app/src/main/res/xml/accessibility_service_config.xml
+          echo '<resources><string name="app_name">Remote Streamer</string></resources>' > app/src/main/res/values/strings.xml
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build with Gradle
         run: |
-          cd build_dir
           gradle wrapper --gradle-version 8.2
           chmod +x gradlew
           ./gradlew assembleDebug
@@ -74,4 +77,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: my-app-apk
-          path: build_dir/app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/*.apk

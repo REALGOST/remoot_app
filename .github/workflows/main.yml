@@ -34,9 +34,9 @@ jobs:
           echo "buildscript { ext.kotlin_version = '1.9.0'; repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.2.0'; classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\" } }" > build_dir/build.gradle
           echo "allprojects { repositories { google(); mavenCentral() } }" >> build_dir/build.gradle
           
-          # 5. كتابة ملف app/build.gradle الداخلي المستقل والصحيح
+          # 5. كتابة ملف app/build.gradle الداخلي (تم تصحيح المسار هنا لحذف التكرار)
           echo "apply plugin: 'com.android.application'" > build_dir/app/build.gradle
-          echo "apply plugin: 'kotlin-android'" >> build_dir/app/app/build.gradle
+          echo "apply plugin: 'kotlin-android'" >> build_dir/app/build.gradle
           echo "android {
               compileSdk 34
               namespace 'com.remote.streamer'
@@ -56,7 +56,7 @@ jobs:
           }" >> build_dir/app/build.gradle
           echo "dependencies { implementation 'androidx.core:core-ktx:1.12.0'; implementation 'androidx.appcompat:appcompat:1.6.1'; implementation 'com.google.android.material:material:1.11.0'; implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3' }" >> build_dir/app/build.gradle
           
-          # 6. ملفات الإعدادات الإضافية للواجهات
+          # 6. ملفات الإعدادات الإضافية للواجهات والـ XML
           echo '<?xml version="1.0" encoding="utf-8"?><accessibility-service xmlns:android="http://google.com" android:accessibilityEventTypes="typeAllMask" android:accessibilityFeedbackType="feedbackGeneric" android:accessibilityFlags="flagDefault" android:canPerformGestures="true" android:description="@string/app_name" />' > build_dir/app/src/main/res/xml/accessibility_service_config.xml
           echo '<resources><string name="app_name">Remote Streamer</string></resources>' > build_dir/app/src/main/res/values/strings.xml
 

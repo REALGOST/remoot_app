@@ -13,191 +13,38 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Create Isolated Android Project
+      - name: Create Clean Android Project
         run: |
-          rm -f build.gradle settings.gradle || true
-          rm -rf app || true
+          # 1. مسح أي ملفات تأسيسية قديمة بره عشان السيرفر ميتلخبطش
+          rm -f build.gradle settings.gradle codemagic.yaml || true
+          rm -rf app android_project || true
           
+          # 2. إنشاء مجلدات المشروع الجديدة النظيفة والمعزولة
           mkdir -p android_project/app/src/main/java/com/remote/streamer
-          mkdir -p android_project/app/src/main
+          mkdir -p android_project/app/src/main/res/xml
+          mkdir -p android_project/app/src/main/res/values
           
-          # 1. كتابة ملف NetworkManager.kt المضمون
-          cat << 'EOF' > android_project/app/src/main/java/com/remote/streamer/NetworkManager.kt
-          package com.remote.streamer
-          import android.content.Context
-          import android.net.dhcp.DhcpInfo
-          import android.net.wifi.WifiManager
-          import java.net.DatagramPacket
-          import java.net.DatagramSocket
-          import java.net.InetAddress
+          # 3. نقل أكواد الكوتلن والمانيفست المرفوعة لمكانها الصح جوه المجلد المعزول
+          cp NetworkManager.kt android_project/app/src/main/java/com/remote/streamer/ || true
+          cp StreamingService.kt android_project/app/src/main/java/com/remote/streamer/ || true
+          cp MainActivity.kt android_project/app/src/main/java/com/remote/streamer/ || true
+          cp AndroidManifest.xml android_project/app/src/main/ || true
           
-          class NetworkManager(private val context: Context) {
-              private val DISCOVERY_PORT = 8888
-              private val CONTROL_PORT = 9999
-              private var controlSocket: DatagramSocket? = null
-              private var isListening = false
+          # 4. كتابة ملفات التأسيس التابعة للـ Gradle بطريقة موحدة تمنع الأخطاء
+          echo "rootProject.name = 'RemoteStreamer'" > android_project/settings.gradle
+          echo "include ':app'" >> android_project/settings.gradle
           
-              private fun getBroadcastAddress(): InetAddress {
-                  val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-                  val dhcp: DhcpInfo = wifiManager.dhcpInfo ?: return InetAddress.getByName("255.255.255.255")
-                  val broadcast = (dhcp.ipAddress and dhcp.netmask) or dhcp.netmask.inv()
-                  val quads = ByteArray(4)
-                  for (k in 0..3) { quads[k] = ((broadcast shr (k * 8)) and 0xFF).toByte() }
-                  return InetAddress.getByAddress(quads)
-              }
+          echo "buildscript { ext.kotlin_version = '1.9.0'; repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.2.0'; classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\" } }" > android_project/build.gradle
+          echo "allprojects { repositories { google(); mavenCentral() } }" >> android_project/build.gradle
           
-              fun startUDPBroadcasting() {
-                  try {
-                      val socket = DatagramSocket()
-                      socket.broadcast = true
-                      val msg = "ANDROID_STREAMING_CLIENT_DISCOVERY".toByteArray()
-                      val packet = DatagramPacket(msg, msg.size, getBroadcastAddress(), DISCOVERY_PORT)
-                      socket.send(packet)
-                      socket.close()
-                  } catch (e: Exception) { e.printStackTrace() }
-              }
+          echo "apply plugin: 'com.android.application'" > android_project/app/build.gradle
+          echo "apply plugin: 'kotlin-android'" >> android_project/app/build.gradle
+          echo "android { compileSdk 34; namespace 'com.remote.streamer'; defaultConfig { applicationId 'com.remote.streamer'; minSdk 24; targetSdk 34; versionCode 1; versionName '1.0' }; sourceSets { main { java.srcDirs = ['src/main/java']; manifest.srcFile 'src/main/AndroidManifest.xml' } } }" >> android_project/app/build.gradle
+          echo "dependencies { implementation 'androidx.core:core-ktx:1.12.0'; implementation 'androidx.appcompat:appcompat:1.6.1'; implementation 'com.google.android.material:material:1.11.0'; implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3' }" >> android_project/app/build.gradle
           
-              fun startListeningForControlPackets(onPacketReceived: (String) -> Unit) {
-                  try {
-                      controlSocket = DatagramSocket(CONTROL_PORT)
-                      isListening = true
-                      val buffer = ByteArray(1024)
-                      while (isListening) {
-                          val packet = DatagramPacket(buffer, buffer.size)
-                          controlSocket?.receive(packet)
-                          val message = String(packet.data, 0, packet.length)
-                          onPacketReceived(message)
-                      }
-                  } catch (e: Exception) { e.printStackTrace() }
-              }
-          
-              fun stopListening() {
-                  isListening = false
-                  controlSocket?.close()
-                  controlSocket = null
-              }
-          }
-          EOF
-
-          # 2. كتابة ملف StreamingService.kt المضمون
-          cat << 'EOF' > android_project/app/src/main/java/com/remote/streamer/StreamingService.kt
-          package com.remote.streamer
-          import android.accessibilityservice.AccessibilityService
-          import android.accessibilityservice.GestureDescription
-          import android.content.Intent
-          import android.graphics.Path
-          import android.os.Build
-          import android.view.accessibility.AccessibilityEvent
-          import kotlin.concurrent.thread
-          
-          class StreamingService : AccessibilityService() {
-              private lateinit var networkManager: NetworkManager
-          
-              override fun onCreate() {
-                  super.onCreate()
-                  networkManager = NetworkManager(this)
-                  thread {
-                      networkManager.startUDPBroadcasting()
-                      networkManager.startListeningForControlPackets { data ->
-                          if (data.startsWith("TOUCH:")) {
-                              val coords = data.substring(6).split(",")
-                              if (coords.size == 2) {
-                                  val x = coords[0].toFloatOrNull() ?: 0f
-                                  val y = coords[1].toFloatOrNull() ?: 0f
-                                  simulateTouchLocal(x, y)
-                              }
-                          }
-                      }
-                  }
-              }
-          
-              private fun simulateTouchLocal(x: Float, y: Float) {
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                      val path = Path()
-                      path.moveTo(x, y)
-                      val gestureBuilder = GestureDescription.Builder()
-                      gestureBuilder.addStroke(GestureDescription.StrokeDescription(path, 0, 50))
-                      dispatchGesture(gestureBuilder.build(), null, null)
-                  }
-              }
-          
-              override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
-              override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
-              override fun onInterrupt() {}
-              override fun onDestroy() {
-                  super.onDestroy()
-                  networkManager.stopListening()
-              }
-          }
-          EOF
-
-          # 3. كتابة ملف MainActivity.kt المضمون
-          cat << 'EOF' > android_project/app/src/main/java/com/remote/streamer/MainActivity.kt
-          package com.remote.streamer
-          import android.content.Intent
-          import android.os.Bundle
-          import android.widget.Button
-          import android.widget.LinearLayout
-          import androidx.appcompat.app.AppCompatActivity
-          
-          class MainActivity : AppCompatActivity() {
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  val layout = LinearLayout(this)
-                  val btn = Button(this)
-                  btn.text = "Start Service"
-                  btn.setOnClickListener {
-                      val serviceIntent = Intent(this, StreamingService::class.java)
-                      startService(serviceIntent)
-                  }
-                  layout.addView(btn)
-                  setContentView(layout)
-              }
-          }
-          EOF
-
-          # 4. كتابة ملف settings.gradle
-          cat << 'EOF' > android_project/settings.gradle
-          rootProject.name = 'RemoteStreamer'
-          include ':app'
-          EOF
-          
-          # 5. كتابة ملف build.gradle الرئيسي
-          cat << 'EOF' > android_project/build.gradle
-          buildscript {
-              ext.kotlin_version = '1.9.0'
-              repositories { google(); mavenCentral() }
-              dependencies {
-                  classpath 'com.android.tools.build:gradle:8.2.0'
-                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-              }
-          }
-          allprojects { repositories { google(); mavenCentral() } }
-          EOF
-          
-          # 6. كتابة ملف app/build.gradle
-          cat << 'EOF' > android_project/app/build.gradle
-          apply plugin: 'com.android.application'
-          apply plugin: 'kotlin-android'
-          android {
-              compileSdk 34
-              namespace 'com.remote.streamer'
-              defaultConfig {
-                  applicationId 'com.remote.streamer'
-                  minSdk 24
-                  targetSdk 34
-                  versionCode 1
-                  versionName '1.0'
-              }
-              sourceSets { main { java.srcDirs = ['src/main/java']; manifest.srcFile 'src/main/AndroidManifest.xml' } }
-          }
-          dependencies {
-              implementation 'androidx.core:core-ktx:1.12.0'
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'com.google.android.material:material:1.11.0'
-              implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
-          }
-          EOF
+          # 5. كتابة ملفات الإعدادات والـ XML الناقصة للتطبيق
+          echo '<?xml version="1.0" encoding="utf-8"?><accessibility-service xmlns:android="http://google.com" android:accessibilityEventTypes="typeAllMask" android:accessibilityFeedbackType="feedbackGeneric" android:accessibilityFlags="flagDefault" android:canPerformGestures="true" android:description="@string/app_name" />' > android_project/app/src/main/res/xml/accessibility_service_config.xml
+          echo '<resources><string name="app_name">Remote Streamer</string></resources>' > android_project/app/src/main/res/values/strings.xml
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
